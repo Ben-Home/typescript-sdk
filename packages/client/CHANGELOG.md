@@ -1,5 +1,16 @@
 # @modelcontextprotocol/client
 
+## 2.4.1
+
+### Patch Changes
+
+- [#3108](https://github.com/modelcontextprotocol/typescript-sdk/pull/3108) [`39ae8e6`](https://github.com/modelcontextprotocol/typescript-sdk/commit/39ae8e6192cf43273aaaf2de4169dfa9f7216e28) Thanks [@claude](https://github.com/apps/claude)! - The bundled Ajv validator is now built with fast-uri 3.1.9 (was 3.1.8). A schema no longer compiles when a `$id` or `$ref` has a percent-encoded character before its first colon (`%61:b`), or `{` or `}` in the host of an `http`, `https`, `ws` or `wss` URL (`http://{host}/a`). Relative values keep their leading `..` segments: a `$ref` to a `$id` such as `../a` now resolves, and a `$ref` of only dot segments (`.`, `../`) no longer resolves to the root schema. Plain names, `#/$defs/...` references, other URLs and URNs are not affected.
+
+- [#2877](https://github.com/modelcontextprotocol/typescript-sdk/pull/2877) [`b415e60`](https://github.com/modelcontextprotocol/typescript-sdk/commit/b415e60bdf0e8dd5d6cbe7e6353abfb982b06dd2) Thanks [@dasjideepak](https://github.com/dasjideepak)! - Add `OAuthClientProvider.skipOfflineAccessConsentPrompt` (and the matching `startAuthorization()` option) so a client can omit the `prompt=consent` the SDK adds when the requested scope includes `offline_access`. Default behavior is unchanged. This unblocks authorization servers such as Microsoft Entra ID tenants that have user consent disabled and admin consent granted, where a forced consent prompt fails with `AADSTS90095` for non-admin users.
+
+- Updated dependencies []:
+    - @modelcontextprotocol/core@2.4.1
+
 ## 2.4.0
 
 ### Minor Changes

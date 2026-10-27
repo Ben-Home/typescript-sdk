@@ -1,5 +1,14 @@
 # @modelcontextprotocol/server
 
+## 2.4.1
+
+### Patch Changes
+
+- [#3108](https://github.com/modelcontextprotocol/typescript-sdk/pull/3108) [`39ae8e6`](https://github.com/modelcontextprotocol/typescript-sdk/commit/39ae8e6192cf43273aaaf2de4169dfa9f7216e28) Thanks [@claude](https://github.com/apps/claude)! - The bundled Ajv validator is now built with fast-uri 3.1.9 (was 3.1.8). A schema no longer compiles when a `$id` or `$ref` has a percent-encoded character before its first colon (`%61:b`), or `{` or `}` in the host of an `http`, `https`, `ws` or `wss` URL (`http://{host}/a`). Relative values keep their leading `..` segments: a `$ref` to a `$id` such as `../a` now resolves, and a `$ref` of only dot segments (`.`, `../`) no longer resolves to the root schema. Plain names, `#/$defs/...` references, other URLs and URNs are not affected.
+
+- Updated dependencies []:
+    - @modelcontextprotocol/core@2.4.1
+
 ## 2.4.0
 
 ### Minor Changes
