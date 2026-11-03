@@ -9,7 +9,7 @@ import type { Options as RateLimitOptions } from 'express-rate-limit';
 import { rateLimit } from 'express-rate-limit';
 
 import type { OAuthRegisteredClientsStore } from '../clients';
-import { InvalidClientMetadataError, OAuthError, ServerError, TooManyRequestsError } from '../errors';
+import { InvalidClientMetadataError, InvalidRedirectUriError, OAuthError, ServerError, TooManyRequestsError } from '../errors';
 import { allowedMethods } from '../middleware/allowedMethods';
 
 export type ClientRegistrationHandlerOptions = {
@@ -41,6 +41,43 @@ export type ClientRegistrationHandlerOptions = {
 };
 
 const DEFAULT_CLIENT_SECRET_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
+/**
+ * Redirect URIs registered through dynamic client registration must not carry a fragment
+ * (RFC 6749 §3.1.2: "The endpoint URI MUST NOT include a fragment component") and must use
+ * HTTPS unless the host is a loopback address (MCP authorization spec, *Communication Security*;
+ * RFC 8252 §7.3 permits plain HTTP for loopback redirects in native-app flows).
+ *
+ * `SafeUrlSchema` cannot express either rule: it only refuses `javascript:`, `data:` and
+ * `vbscript:`, and redirect URIs also have to be accepted by clients parsing server metadata.
+ * The check therefore lives in the registration handler.
+ */
+function isLoopbackHost(hostname: string): boolean {
+    const host = hostname.toLowerCase().replaceAll('[', '').replaceAll(']', '');
+    return host === 'localhost' || host === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+}
+
+export function findInvalidRedirectUri(redirectUris: readonly string[]): string | undefined {
+    for (const uri of redirectUris) {
+        if (uri.includes('#')) {
+            return `redirect_uri "${uri}" must not contain a fragment (RFC 6749 §3.1.2)`;
+        }
+
+        let parsed: URL;
+        try {
+            parsed = new URL(uri);
+        } catch {
+            // SafeUrlSchema already rejected unparseable values; treat any survivor conservatively.
+            return `redirect_uri "${uri}" could not be parsed`;
+        }
+
+        if (parsed.protocol === 'http:' && !isLoopbackHost(parsed.hostname)) {
+            return `redirect_uri "${uri}" must use HTTPS unless the host is a loopback address`;
+        }
+    }
+
+    return undefined;
+}
 
 export function clientRegistrationHandler({
     clientsStore,
@@ -85,6 +122,12 @@ export function clientRegistrationHandler({
             }
 
             const clientMetadata = parseResult.data;
+
+            const invalidRedirectUri = findInvalidRedirectUri(clientMetadata.redirect_uris);
+            if (invalidRedirectUri) {
+                throw new InvalidRedirectUriError(invalidRedirectUri);
+            }
+
             const isPublicClient = clientMetadata.token_endpoint_auth_method === 'none';
 
             // Generate client credentials

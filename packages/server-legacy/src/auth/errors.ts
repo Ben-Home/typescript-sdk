@@ -157,6 +157,14 @@ export class InvalidClientMetadataError extends OAuthError {
 }
 
 /**
+ * Invalid redirect URI error - The value of one or more redirect URIs is invalid.
+ * (Dynamic client registration - RFC 7591 §3.2.2)
+ */
+export class InvalidRedirectUriError extends OAuthError {
+    static override errorCode = 'invalid_redirect_uri';
+}
+
+/**
  * Insufficient scope error - The request requires higher privileges than provided by the access token.
  */
 export class InsufficientScopeError extends OAuthError {

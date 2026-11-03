@@ -106,6 +106,64 @@ describe('Client Registration Handler', () => {
             expect(spyRegisterClient).not.toHaveBeenCalled();
         });
 
+        it('rejects a plain-HTTP redirect URI on a non-loopback host', async () => {
+            const response = await supertest(app)
+                .post('/register')
+                .send({
+                    redirect_uris: ['http://attacker.example/callback'],
+                    token_endpoint_auth_method: 'none'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('invalid_redirect_uri');
+            expect(response.body.error_description).toContain('HTTPS');
+            expect(spyRegisterClient).not.toHaveBeenCalled();
+        });
+
+        it('rejects a redirect URI carrying a fragment', async () => {
+            const response = await supertest(app)
+                .post('/register')
+                .send({
+                    redirect_uris: ['https://client.example/callback#fragment'],
+                    token_endpoint_auth_method: 'none'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('invalid_redirect_uri');
+            expect(response.body.error_description).toContain('fragment');
+            expect(spyRegisterClient).not.toHaveBeenCalled();
+        });
+
+        it('rejects when only one of several redirect URIs is invalid', async () => {
+            const response = await supertest(app)
+                .post('/register')
+                .send({
+                    redirect_uris: ['https://client.example/callback', 'http://client.example/callback'],
+                    token_endpoint_auth_method: 'none'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('invalid_redirect_uri');
+            expect(spyRegisterClient).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            ['http://localhost:3000/callback'],
+            ['http://127.0.0.1:6274/oauth/callback'],
+            ['http://127.0.0.2:1234/cb'],
+            ['http://[::1]:8080/callback'],
+            ['cursor://anysphere.cursor/callback'],
+            ['https://example.com/callback']
+        ])('accepts %s', async redirectUri => {
+            const response = await supertest(app)
+                .post('/register')
+                .send({ redirect_uris: [redirectUri], token_endpoint_auth_method: 'none' });
+
+            expect(response.status).toBe(201);
+            expect(response.body.redirect_uris).toEqual([redirectUri]);
+            expect(spyRegisterClient).toHaveBeenCalledTimes(1);
+        });
+
         it('successfully registers client with minimal metadata', async () => {
             const clientMetadata: OAuthClientMetadata = {
                 redirect_uris: ['https://example.com/callback']
